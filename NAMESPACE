@@ -1,0 +1,19 @@
+
+useDynLib(hmmcov)
+
+# ------------------------------------------
+# Export directives.  
+# ------------------------------------------
+export(hmm)
+export(arhmm)
+export(hmmcov)
+export(arhmmcov)
+export(augvec)
+export(simARHMM)
+export(arhmmvarsel)
+
+
+# ------------------------------------------
+# S3method declarations.  
+# ------------------------------------------
+

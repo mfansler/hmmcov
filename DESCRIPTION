@@ -1,0 +1,11 @@
+Package: hmmcov
+Type: Package
+Title: HMM and AR-HMM modeling of DAE-seq data, with variable selection
+Version: 1.0
+Date: 2013-05-19
+Author: Naim Rashid
+Maintainer: Naim Rashid <naim@unc.edu>
+Description: HMM and AR-HMM modeling of DAE-seq data, with variable selection
+License: GPL version 2 or later
+LazyLoad: yes
+Packaged: 2013-05-19 17:14:24 UTC; 
