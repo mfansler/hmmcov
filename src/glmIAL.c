@@ -1,11 +1,3 @@
-/*
- *  glmIAL.c
- *  
- *
- *  Created by Wei Sun on 09/08/10.
- *
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>

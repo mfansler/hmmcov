@@ -1,10 +1,3 @@
-/*
- *  IAL.c
- *
- *  Created by Wei Sun on Sep 8 2010.
- *
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>

@@ -1,11 +1,3 @@
-/*
- *  glm.c
- *  
- *
- *  Created by Wei Sun on 5/11/10.
- *
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>

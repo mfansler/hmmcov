@@ -1,11 +1,3 @@
-/*
- *  glm.h
- *  
- *
- *  Created by Wei Sun on 5/11/10.
- *  Copyright 2010 UNC. All rights reserved.
- *
- */
 #ifndef _GLM_H_
 #define _GLM_H_
 
