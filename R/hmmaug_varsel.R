@@ -43,6 +43,9 @@ EMconv=10^-6, glmconv=10^-5){
 
 	#set number of states and dimension of X
 	K=length(pi)
+
+	if(is.null(ncol(Xaug))) Xaug = matrix(Xaug, ncol = ncol(X))
+        if(is.null(ncol(XEaug))) XEaug = matrix(XEaug, ncol = ncol(XE))
 	p = ncol(Xaug)
 	p2 = ncol(XEaug)
 
