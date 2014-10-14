@@ -15,7 +15,7 @@ export(simARHMM)
 export(arhmmvarsel)
 export(glmNB.IAL)
 export(glmIAL)
-export(logsumexp)
+export(logsumexpc)
 # ------------------------------------------
 # S3method declarations.  
 # ------------------------------------------

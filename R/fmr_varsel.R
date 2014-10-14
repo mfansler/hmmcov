@@ -1,10 +1,10 @@
-logsumexp=function(v){
+logsumexpc=function(v){
   res = .C("logsumexpR", as.double(v), result = rep(0.0, nrow(v)), nrow(v), ncol(v), package = "hmmcov")
   return(res$result)
 }
 
 
-# logsumexp=function(v){
+# logsumexpc=function(v){
 #   if(any(is.infinite(v))){
 #     stop("infinite value in v\n")
 #   }
@@ -17,7 +17,7 @@ logsumexp=function(v){
 
 fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL, m20=NULL, 
                 glmtype="pois", maxitIAL=100, thresh=0, XE = NULL, maxitEM=50, 
-                EMconv=10^-6, glmconv=10^-5, zeroinfl = F, XZ = NULL){
+                EMconv=10^-6, glmconv=10^-5, zeroinfl = F, XZ = NULL, trace = 0, pi = NULL, Pi = NULL){
   
   library(MASS)
   
@@ -32,6 +32,8 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
   if(!is.null(m10) & !is.null(m20)){
     m1 = m10
     m2 = m20
+    pi1 = Pi
+    pi2 = pi
   }else{
     probi1=(y<=quantile(y, prop1))^2
     pi1=mean(probi1)
@@ -54,7 +56,7 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
     if(glmtype=="pois"){
       m1=glmIAL(y=y, X=scale(X), prior=probi1, family="poisson", prop=pi1, pMax=dim(X)[2], delta=de1, tau=ta1, nReEstimate=0,maxitIAL=maxitIAL, maxit=25, conv=glmconv)
     }else{
-      m1=glmNB.IAL(y=y, X=scale(X), prior=probi1,   prop=pi1, pMax=dim(X)[2], delta=de1, tau=ta1, nReEstimate=0,maxitIAL=100, maxit=25, conv=glmconv)
+      m1=glmNB.IAL(y=y, X=scale(X), prior=probi1,   prop=pi1, pMax=dim(X)[2], delta=de1, tau=ta1, nReEstimate=0,maxitIAL=100, maxit=1, conv=glmconv)
     }
     vars1 =as.numeric(sqrt(apply(X, 2, var)))
     m1$b2use = m1$b2use/vars1[m1$w2use]
@@ -69,7 +71,7 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
     if(glmtype=="pois"){
       m2=glmIAL(y=y, X=scale(XE), prior=1-probi1, family="poisson", prop=pi2, pMax=dim(XE)[2], delta=de1, tau=ta1, nReEstimate=0,maxitIAL=maxitIAL, maxit=25, conv=glmconv)
     }else{
-      m2=glmNB.IAL(y=y, X=scale(XE), prior=1-probi1,   prop=pi2, pMax=dim(XE)[2], delta=de2, tau=ta2, nReEstimate=0,maxitIAL=100, maxit=25, conv=glmconv)
+      m2=glmNB.IAL(y=y, X=scale(XE), prior=1-probi1,   prop=pi2, pMax=dim(XE)[2], delta=de2, tau=ta2, nReEstimate=0,maxitIAL=100, maxit=1, conv=glmconv)
     }
     vars2 =as.numeric(sqrt(apply(XE, 2, var)))
     m2$b2use = m2$b2use/vars2[m2$w2use]
@@ -81,9 +83,9 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
   if(zeroinfl == T){
       if(is.null(XZ)) XZ = matrix(1, ncol= 1, nrow = nrow(X))
       probi0 =(y  == 0)^2 
-      model0 = glm(probi0 ~ XZ-1, family = binomial())
+      model0 = suppressWarnings(glm(probi0 ~ XZ-1, family = binomial()))
   }
-
+  if(trace ==1)  cat("fmrcov init finished \n")
   #prob=matrix(0, n, K)
   #if(glmtype=="pois"){
   #  prob[,1]=dpois(y, lambda=m1$fitted, log=T)
@@ -108,7 +110,7 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
   if(zeroinfl == F){ 
     pp1 = log(pi1) + dnbinom(y, mu = m1$fitted, size = 1/m1$phi, log = T) 
     pp2 = log(pi2) + dnbinom(y, mu = m2$fitted, size = 1/m2$phi, log = T)
-    probi1 = exp(pp1 - logsumexp(cbind(pp1, pp2)))
+    probi1 = exp(pp1 - logsumexpc(cbind(pp1, pp2)))
     probi2 = 1 - probi1
     probi0 = rep(0, length(probi1))
   }else{
@@ -117,8 +119,8 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
     pp2 = log(1-pp0)+(log(pi2) + dnbinom(y, mu = m2$fitted, size = 1/m2$phi, log = T))
     
     d = rep(0, length(y))
-    d[y==0] = logsumexp(cbind(log(pp0), pp1, pp2)[y==0,])
-    d[y>0] = logsumexp(cbind(pp1, pp2)[y>0,])
+    d[y==0] = logsumexpc(cbind(log(pp0), pp1, pp2)[y==0,])
+    d[y>0] = logsumexpc(cbind(pp1, pp2)[y>0,])
     
     probi1 = exp(pp1 - d)   
     probi2 = exp(pp2 - d)        
@@ -188,7 +190,7 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
       if(glmtype=="pois"){
         m1=glmIAL(y=y1, X=scale(XS1), prior=f1[which1],   prop=mean(f1), pMax=dim(XS1)[2], delta=de1, tau=ta1, nReEstimate=0,maxitIAL=maxitIAL, maxit=25, conv=glmconv, fitted=m1$fitted[which1],family="poisson")
       }else{
-        m1=glmNB.IAL(y=y1, X=scale(XS1), prior=f1[which1],   prop=mean(f1), pMax=dim(XS1)[2], delta=de1, tau=ta1,  nReEstimate=0, maxitIAL=maxitIAL, maxit=25, conv=glmconv, fitted=m1$fitted[which1], phi=phi1)
+        m1=glmNB.IAL(y=y1, X=scale(XS1), prior=f1[which1],   prop=mean(f1), pMax=dim(XS1)[2], delta=de1, tau=ta1,  nReEstimate=0, maxitIAL=maxitIAL, maxit=1, conv=glmconv, fitted=m1$fitted[which1], phi=phi1)
       }
       unstcoef1=m1$b2use	
       vars1 =as.numeric(sqrt(apply(XS1, 2, var)))
@@ -250,7 +252,7 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
     }
     
     if(zeroinfl == T){
-      model0 = glm(probi0 ~ XZ-1, family = binomial())
+      model0 = suppressWarnings(glm(probi0 ~ XZ-1, family = binomial()))
     }
     
     #E step
@@ -259,28 +261,28 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
     if(zeroinfl == F){ 
       pp1 = log(pi1) + dnbinom(y, mu = m1$fitted, size = 1/m1$phi, log = T) 
       pp2 = log(pi2) + dnbinom(y, mu = m2$fitted, size = 1/m2$phi, log = T)
-      probi1 = exp(pp1 - logsumexp(cbind(pp1, pp2)))
+      probi1 = exp(pp1 - logsumexpc(cbind(pp1, pp2)))
       probi2 = 1 - probi1
       probi0 = rep(0, length(probi1))
-      ll[i] = sum(logsumexp(cbind(pp1, pp2))) 
+      ll[i] = sum(logsumexpc(cbind(pp1, pp2))) 
     }else{
       pp0 = model0$fitted
       pp1 = log(1-pp0)+(log(pi1) + dnbinom(y, mu = m1$fitted, size = 1/m1$phi, log = T)) 
       pp2 = log(1-pp0)+(log(pi2) + dnbinom(y, mu = m2$fitted, size = 1/m2$phi, log = T))
       
       d = rep(0, length(y))
-      d[y==0] = logsumexp(cbind(log(pp0), pp1, pp2)[y==0,])
-      d[y>0] = logsumexp(cbind(pp1, pp2)[y>0,])
+      d[y==0] = logsumexpc(cbind(log(pp0), pp1, pp2)[y==0,])
+      d[y>0] = logsumexpc(cbind(pp1, pp2)[y>0,])
       
       
       probi1 = exp(pp1 - d)   
       probi2 = exp(pp2 - d)        
       probi0 = exp(log(pp0) - d)  
       probi0[y>0] = 0 
-      ll[i] = sum(logsumexp(cbind(log(pp0)[y==0], pp1[y==0], pp2[y==0]))) + sum(logsumexp(cbind(pp1[y>0], pp2[y>0])))
+      ll[i] = sum(logsumexpc(cbind(log(pp0)[y==0], pp1[y==0], pp2[y==0]))) + sum(logsumexpc(cbind(pp1[y>0], pp2[y>0])))
     }
     
-    
+    if(trace ==1)  cat("fmrcov EM step" ,i, "ll", ll[i] ,"\n")
     
     #resu=.C("forwardback", as.double(log(Pi)), as.double(log(pi)), as.double(prob), as.integer(nrow(prob)), as.integer(K), logalpha = double(nrow(prob)*K),logbeta = double(nrow(prob)*K),LL = double(1), package="hmmcov")
     #forward = matrix(resu$logalpha, ncol=2) 
@@ -317,7 +319,7 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
   m2final[m2$w2use]=m2$b2use
   
   finalcoef=matrix(c(m1$b0, m1final, m2$b0,m2final, a, pi), 1, length(c(m1$b0, m1final, m2$b0,m2final, a, pi))) 
-  if(glmtype=="nb") finalcoef=matrix(c(m1$b0, m1final, 1/phi1, m2$b0,m2final, 1/phi2, a, pi), 1, length(c(m1$b0, m1final, m2$b0,m2final, a, pi, 1/phi1, 1/phi2))) 
+  if(glmtype=="nb") finalcoef=matrix(c(m1$b0, m1final, 1/phi1, m2$b0,m2final, 1/phi2, pi1, pi2), 1, length(c(m1$b0, m1final, m2$b0,m2final, pi1, pi2, 1/phi1, 1/phi2))) 
   
   m11=list()
   m11$fitted=m1$fitted
@@ -332,24 +334,24 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
   m22$phi  = phi2
   
   
-  finalresults=list(forwardback=cbind(probi1, probi2, probi0), Pi=pi1, pi=pi2, coef=finalcoef, unstcoef1=unstcoef1, time=time, unstcoef2=unstcoef2, ll=max(ll[ll<0]), BIC=-2*ll[ll<0][sum(ll<0)]+sum(finalcoef!=0)*log(n))		
+  finalresults=list(forwardback=cbind(probi1, probi2, probi0), Pi=pi1, pi=pi2, coef=finalcoef, unstcoef1=unstcoef1, time=time, unstcoef2=unstcoef2, ll=max(ll[ll<0]), BIC=-2*ll[ll<0][sum(ll<0)]+sum(finalcoef!=0)*log(n), m1 = m11, m2 = m22, model0 = model0)		
   
   return(finalresults)
 }
 
 
-fmr = function(y, X, prop1, maxitIAL=100,thresh=0.05, XE=NULL,maxitEM=50, glmtype="pois", EMconv=10^-6, glmconv=10^-5, zeroinfl = F, XZ = NULL){
+fmr = function(y, X, prop1, maxitIAL=100,thresh=0.05, XE=NULL,maxitEM=50, glmtype="pois", EMconv=10^-6, glmconv=10^-5, zeroinfl = F, XZ = NULL, trace=0, m10 = NULL, m20 = NULL, pi = NULL, Pi = NULL){
   
   if(length(y)!=nrow(X)) stop("length of y does not match rows of X, or X is not a matrix")
   
   n = length(y)
-  res = fmrcov(de1=0, ta1=-1, de2=0, ta2=-1, n=n, y=y, X=X, prop1=prop1,m10=NULL, m20=NULL, 
-               glmtype=glmtype, maxitIAL=maxitIAL, thresh=thresh, XE = XE, maxitEM=maxitEM, EMconv=EMconv, glmconv=glmconv, zeroinfl = zeroinfl, XZ = XZ)
-  coef  = matrix(res$coef[1:(length(res$coef)-3)], ncol=2)
+  res = fmrcov(de1=0, ta1=-1, de2=0, ta2=-1, n=n, y=y, X=X, prop1=prop1,m10=m10, m20=m20, 
+               glmtype=glmtype, maxitIAL=maxitIAL, thresh=thresh, XE = XE, maxitEM=maxitEM, EMconv=EMconv, glmconv=glmconv, zeroinfl = zeroinfl, XZ = XZ, trace, pi = pi, Pi = Pi)
+  coef  = matrix(res$coef[1:(length(res$coef)-2)], ncol=2)
   rownames(coef) = rep("", nrow(coef))
   
   if(glmtype == "nb") rownames(coef)[nrow(coef)] = "phi" 
-  final = list(forwardbackward = res$forwardback, coef = coef, ll=res$ll, Pi = res$Pi, pi=res$pi)
+  final = list(forwardbackward = res$forwardback, coef = coef, ll=res$ll, Pi = res$Pi, pi=res$pi, m1 = res$m1, m2 = res$m2, model0 = res$model0)
   return(final)
 }
 # 
