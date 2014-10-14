@@ -349,57 +349,57 @@ fmr = function(y, X, prop1, maxitIAL=100,thresh=0.05, XE=NULL,maxitEM=50, glmtyp
   final = list(forwardbackward = res$forwardback, coef = coef, ll=res$ll, Pi = res$Pi, pi=res$pi)
   return(final)
 }
-
-if(initmethod=='quantile'){
-  require(quantreg)
-  if(fnum == 1){
-    startprop=startenrichment(c(.15, .001), data, formula, formulaE, formulaZ, initmethod)
-  }
-  data2=data
-  if(sum(colnames(data)=='input_count')==1){data2$input_count=exp(data2$input_count)-1}
-  if(sum(colnames(data)=='exp_cnvwin_log')==1){data2$exp_cnvwin_log=exp(data2$exp_cnvwin_log)-1}
-  prop2=max(c(startprop, 1000/n))
-  prop1=1-prop2
-  t=rq(formula, tau=1-prop2, data=data2, method='pfn')
-  priorCOUNTweight=rep(10^-10, length(Y))    
-  priorCOUNTweight[as.double(which(t$residuals>quantile(t$residuals,1-prop2)))]=1-10^-10
-  rm(data2)
-}else if(initmethod=='count'){
-  if(fnum == 1){
-    startprop=startenrichment(c(.15, .001), data, formula, formulaE,formulaZ,initmethod)
-  }
-  prop2=max(c(startprop, 1000/n))
-  prop1=1-prop2
-  n1  = round(length(Y) * (1 - prop2))
-  priorCOUNTweight=rep(1-10^-10, length(Y))
-  odY = order(Y)
-  priorCOUNTweight[odY[1:n1]]=10^-10
-}else if(initmethod=='pscl'){
-  require(quantreg)
-  mf2 <- model.frame(formula=formula, data=data)
-  X2 <- model.matrix(attr(mf2, "terms"), data=mf2)
-  if(fnum == 1){
-    a=zeroinfl(formula, data=data,dist='negbin', EM=TRUE)
-  }else{
-    a=zeroinfl(formula, data=data,dist='negbin', EM=TRUE,start=param)
-  }
-  leverage=hat(X2, intercept=FALSE)
-  fdrlevel=threshold
-  standardized=residuals(a)/sqrt(1-leverage)
-  pval=1-pnorm(as.matrix(standardized))
-  fdr=qvalue(pval)
-  peaks=which(fdr[[3]]<fdrlevel)
-  prop2=length(peaks)/length(Y)
-  prop1=1-prop2
-  param=list(count=a$coefficients$count, zero=a$coefficients$zero, theta=a$theta)
-  priorCOUNTweight=rep(10^-10, length(Y))	  
-  priorCOUNTweight[peaks]=1-10^-10
-  rm(X2)
-  rm(mf2)
-  rm(standardized)
-  rm(leverage)
-  rm(pval)
-  rm(fdr)
-  rm(a)
-  gc()
-}
+# 
+# if(initmethod=='quantile'){
+#   require(quantreg)
+#   if(fnum == 1){
+#     startprop=startenrichment(c(.15, .001), data, formula, formulaE, formulaZ, initmethod)
+#   }
+#   data2=data
+#   if(sum(colnames(data)=='input_count')==1){data2$input_count=exp(data2$input_count)-1}
+#   if(sum(colnames(data)=='exp_cnvwin_log')==1){data2$exp_cnvwin_log=exp(data2$exp_cnvwin_log)-1}
+#   prop2=max(c(startprop, 1000/n))
+#   prop1=1-prop2
+#   t=rq(formula, tau=1-prop2, data=data2, method='pfn')
+#   priorCOUNTweight=rep(10^-10, length(Y))    
+#   priorCOUNTweight[as.double(which(t$residuals>quantile(t$residuals,1-prop2)))]=1-10^-10
+#   rm(data2)
+# }else if(initmethod=='count'){
+#   if(fnum == 1){
+#     startprop=startenrichment(c(.15, .001), data, formula, formulaE,formulaZ,initmethod)
+#   }
+#   prop2=max(c(startprop, 1000/n))
+#   prop1=1-prop2
+#   n1  = round(length(Y) * (1 - prop2))
+#   priorCOUNTweight=rep(1-10^-10, length(Y))
+#   odY = order(Y)
+#   priorCOUNTweight[odY[1:n1]]=10^-10
+# }else if(initmethod=='pscl'){
+#   require(quantreg)
+#   mf2 <- model.frame(formula=formula, data=data)
+#   X2 <- model.matrix(attr(mf2, "terms"), data=mf2)
+#   if(fnum == 1){
+#     a=zeroinfl(formula, data=data,dist='negbin', EM=TRUE)
+#   }else{
+#     a=zeroinfl(formula, data=data,dist='negbin', EM=TRUE,start=param)
+#   }
+#   leverage=hat(X2, intercept=FALSE)
+#   fdrlevel=threshold
+#   standardized=residuals(a)/sqrt(1-leverage)
+#   pval=1-pnorm(as.matrix(standardized))
+#   fdr=qvalue(pval)
+#   peaks=which(fdr[[3]]<fdrlevel)
+#   prop2=length(peaks)/length(Y)
+#   prop1=1-prop2
+#   param=list(count=a$coefficients$count, zero=a$coefficients$zero, theta=a$theta)
+#   priorCOUNTweight=rep(10^-10, length(Y))	  
+#   priorCOUNTweight[peaks]=1-10^-10
+#   rm(X2)
+#   rm(mf2)
+#   rm(standardized)
+#   rm(leverage)
+#   rm(pval)
+#   rm(fdr)
+#   rm(a)
+#   gc()
+# }
