@@ -4,15 +4,18 @@ useDynLib(hmmcov)
 # ------------------------------------------
 # Export directives.  
 # ------------------------------------------
+export(fmr)
 export(hmm)
 export(arhmm)
+export(fmrcov)
 export(hmmcov)
 export(arhmmcov)
 export(augvec)
 export(simARHMM)
 export(arhmmvarsel)
-
-
+export(glmNB.IAL)
+export(glmIAL)
+export(logsumexp)
 # ------------------------------------------
 # S3method declarations.  
 # ------------------------------------------

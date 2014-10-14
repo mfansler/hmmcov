@@ -476,6 +476,16 @@ double logsumexp(double* v, int nl, int nh)
   return(val);
 }
 
+double logsumexpR(double* v, double* result, int* Rn, int *Rp)
+{
+  int i, j, n = *Rn, p = *Rp;
+  double res[p];
+  for(j = 0; j<n; j++){
+    for(i =0; i<p; i++) res[i] = v[i*n+j];
+    result[j] = logsumexp(res, 0, p-1);     
+  }
+}
+
 /**********************************************************************
  * 
  * slope

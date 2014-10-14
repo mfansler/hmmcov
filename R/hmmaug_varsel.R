@@ -9,7 +9,7 @@ augvec=function(y, K=2){
 
 arhmmcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, pi, Pi, m10=NULL, m20=NULL, 
 glmtype="pois", maxitIAL=100, thresh=0, XE = NULL, maxitEM=50, 
-EMconv=10^-6, glmconv=10^-5){
+EMconv=10^-6, glmconv=10^-5, diff = F){
 
 	#print(c(de1, de2, thresh, maxitIAL))
 
@@ -37,8 +37,15 @@ EMconv=10^-6, glmconv=10^-5){
 		m1$w2use = 1:length(m1$b2use)
 		m2$w2use = 1:length(m2$b2use)
 	}else{
-		probi1=(yaug<=quantile(yaug, prop1))^2
-		pi1=mean(probi1)
+		if(diff == F){
+      probi1=(yaug<=quantile(yaug, prop1))^2
+		  pi1=mean(probi1)
+		}else{
+      require(quantreg)
+      residuals = abs(rq(y ~ exp(XB)-1)$residuals)
+		  probi1=augvec((residuals<=quantile(residuals, prop1))^2,length(pi))
+		  pi1=mean(probi1)
+		}
 	}
 
 	#set number of states and dimension of X
@@ -66,7 +73,7 @@ EMconv=10^-6, glmconv=10^-5){
 		coef1[1]=m1$b0			
 	}
 
-	if(!is.null(de2) & !is.null(ta2) & is.null(m20)){
+	if(!is.null(de2) & !is.null(ta2) & is.null(m20) & diff == F){
 		if(glmtype=="pois"){
 			m2=glmIAL(y=yaug, X=scale(XEaug), prior=1-probi1, family="poisson", prop=1-pi1, pMax=dim(XEaug)[2], delta=de1, tau=ta1, nReEstimate=0,maxitIAL=maxitIAL, maxit=25, conv=glmconv)
 		}else{
@@ -79,18 +86,8 @@ EMconv=10^-6, glmconv=10^-5){
 		coef2[1]=m2$b0
 	}
 
-	prob=matrix(0, n, K^2)
-	if(glmtype!="nb"){
-		prob[,1]=dpois(y, lambda=m1$fitted[seq(1, 2*n, by=2)], log=T)
-		prob[,2]=dpois(y, lambda=m1$fitted[seq(2, 2*n, by=2)], log=T)
-		prob[,3]=dpois(y, lambda=m2$fitted[seq(1, 2*n, by=2)], log=T)
-		prob[,4]=dpois(y, lambda=m2$fitted[seq(2, 2*n, by=2)], log=T)
-	}else{
-		prob[,1]=dnbinom(y, mu=m1$fitted[seq(1, 2*n, by=2)], size=1/m1$phi, log=T)
-		prob[,2]=dnbinom(y, mu=m1$fitted[seq(2, 2*n, by=2)], size=1/m1$phi, log=T)
-		prob[,3]=dnbinom(y, mu=m2$fitted[seq(1, 2*n, by=2)], size=1/m2$phi, log=T)
-		prob[,4]=dnbinom(y, mu=m2$fitted[seq(2, 2*n, by=2)], size=1/m2$phi, log=T)
-	}
+  prob = setprob(y, m1, m2, n, K, glmtype, diff)
+  
 	resu=.C("forwardbackaug", as.double(log(Pi)), as.double(log(pi)), as.double(prob), as.integer(nrow(prob)), as.integer(K), logalpha = double(nrow(prob)*K),logbeta = double(nrow(prob)*K),LL = double(1), package="hmmcov")
 	forward = matrix(resu$logalpha, ncol=2) 
 	backward = matrix(resu$logbeta, ncol=2) 
@@ -122,11 +119,13 @@ EMconv=10^-6, glmconv=10^-5){
 		res0[seq(1, 2*n, by=2)]=(log(y + 1) - log(exp(m1$b0)+1))		
 	}
 
-	if(length(m2$b2use)>0){
-	  res0[seq(1, 2*n, by=2)]=(log(y + 1) - log(exp(XE%*%matrix(m2$b2use[1:p2], p2, 1)+m2$b0)+1))
-	}else{
-		res0[seq(1, 2*n, by=2)]=(log(y + 1) - log(exp(m2$b0)+1))
-	}
+  if(diff == F){
+	  if(length(m2$b2use)>0){
+	    res0[seq(1, 2*n, by=2)]=(log(y + 1) - log(exp(XE%*%matrix(m2$b2use[1:p2], p2, 1)+m2$b0)+1))
+	  }else{
+	  	res0[seq(1, 2*n, by=2)]=(log(y + 1) - log(exp(m2$b0)+1))
+	  }
+  }
 
 	res=c(0,0,res0[-((2*n-1):(2*n))])
 	Xaug=cbind(Xaug, res)
@@ -140,7 +139,7 @@ EMconv=10^-6, glmconv=10^-5){
 	ll=rep(0, maxitEM)
 	unstcoef1=unstcoef2=0
 	phi1 = m1$phi
-	phi2 = m2$phi
+	if(diff == F) phi2 = m2$phi
 
 	library(MASS)
 	#begin ECM loop
@@ -248,7 +247,7 @@ EMconv=10^-6, glmconv=10^-5){
 			}	
 		}
 
-		if(!is.null(de2) & !is.null(ta2)){
+		if(!is.null(de2) & !is.null(ta2) & diff == F){
 			if(glmtype=="pois"){
 				m2=glmIAL(y=y2, X=scale(XS2), prior=f2[which2],   prop=mean(f2), pMax=dim(XS2)[2], delta=de2, tau=ta2, nReEstimate=0,maxitIAL=maxitIAL, maxit=25, conv=glmconv, fitted=m2$fitted[which2],family="poisson", protect=dim(XS2)[2])
 			}else{
@@ -283,18 +282,7 @@ EMconv=10^-6, glmconv=10^-5){
 		#E step
 		#calculate emission probabilities for forward-backward algorithm on log scale
 
-		prob=matrix(0, n, K^2)
-		if(glmtype!="nb"){
-			prob[,1]=dpois(y, lambda=m1$fitted[seq(1, 2*n, by=2)], log=T)
-			prob[,2]=dpois(y, lambda=m1$fitted[seq(2, 2*n, by=2)], log=T)
-			prob[,3]=dpois(y, lambda=m2$fitted[seq(1, 2*n, by=2)], log=T)
-			prob[,4]=dpois(y, lambda=m2$fitted[seq(2, 2*n, by=2)], log=T)
-		}else{
-			prob[,1]=dnbinom(y, mu=m1$fitted[seq(1, 2*n, by=2)], size=1/phi1, log=T)
-			prob[,2]=dnbinom(y, mu=m1$fitted[seq(2, 2*n, by=2)], size=1/phi1, log=T)
-			prob[,3]=dnbinom(y, mu=m2$fitted[seq(1, 2*n, by=2)], size=1/phi2, log=T)
-			prob[,4]=dnbinom(y, mu=m2$fitted[seq(2, 2*n, by=2)], size=1/phi2, log=T)
-		}
+		prob = setprob(y, m1, m2, n, K, glmtype, diff)
 
 		if(any(pi == 0)) pi = abs(pi - 10^-100)
 		resu=.C("forwardbackaug", as.double(log(Pi)), as.double(log(pi)), as.double(prob), as.integer(nrow(prob)), as.integer(K), logalpha = double(nrow(prob)*K),logbeta = double(nrow(prob)*K),LL = double(1), package="hmmcov")
@@ -333,7 +321,7 @@ EMconv=10^-6, glmconv=10^-5){
 			res0[seq(1, 2*n, by=2)]=(log(y + 1) - log(exp(m1$b0)+1))
 		}
 
-		if(length(m2$b2use)>1){
+		if(length(m2$b2use)>1 & diff == F){
 			res0[seq(2, 2*n, by=2)]=(log(y + 1) - log(exp(XE[,m2$w2use[-length(m2$w2use)]]%*%matrix(m2$b2use[-length(m2$b2use)],length(m2$b2use)-1, 1)+m2$b0)+1))
 		}else{
 			res0[seq(2, 2*n, by=2)]=(log(y + 1) - log(exp(m2$b0)+1))
@@ -357,9 +345,16 @@ EMconv=10^-6, glmconv=10^-5){
 
 	m1final=rep(0,p)
 	m1final[m1$w2use]=m1$b2use
-	m2final=rep(0,p2)
-	m2final[m2$w2use]=m2$b2use
-
+  if(diff == F){
+	  m2final=rep(0,p2)
+	  m2final[m2$w2use]=m2$b2use
+  }else{
+    m2final=rep(0,p2)
+    m2 = list()
+    m2$b0 = 0 
+    phi2 = -1
+  }
+  
 	finalcoef=matrix(c(m1$b0, m1final, m2$b0,m2final, a, pi), 1, length(c(m1$b0, m1final, m2$b0,m2final, a, pi))) 
 	if(glmtype=="nb") finalcoef=matrix(c(m1$b0, m1final, 1/phi1, m2$b0,m2final,1/phi2, a, pi), 1, length(c(m1$b0, m1final, m2$b0,m2final, a, pi, 1/phi1, 1/phi2))) 
 
@@ -388,20 +383,15 @@ time=time, unstcoef2=unstcoef2, ll=ll[ll<0][sum(ll<0)], monotone=0, monotone2=0,
 
 #wrapper for hmm and arhmm, not to be used with variable selection
 #X must not have an intercept column
-arhmm = function(y, X, prop1,maxitIAL=1000,thresh=0.05, XE=NULL,maxitEM=50, glmtype="pois", EMconv=10^-6, glmconv=10^-5){
+arhmm = function(y, X, prop1,maxitIAL=1000,thresh=0.05, XE=NULL,maxitEM=50, glmtype="pois", EMconv=10^-6, glmconv=10^-5, diff = F){
 	
 	if(length(y)!=nrow(X)) stop("length of y does not match rows of X, or X is not a matrix")
 
 	n = length(y)
-	t = quantile(y,prop1)
-	Pi = matrix(0, 2, 2)
-	Pi[1,1] = sum(y[-1] <= t & y[-n] <= t)/sum(y[-1]<=t)
-	Pi[1,2] = sum(y[-1] <= t & y[-n] >  t)/sum(y[-1]<=t)
-	Pi[2,1] = sum(y[-1] > t & y[-n] <= t)/sum(y[-1]>t)
-	Pi[2,2] = sum(y[-1] > t & y[-n] > t)/sum(y[-1]>t)
-	
-	pi = abs(c(y[1]<=t, y[1]>t) - 10^-100)
-
+  init = initparms(y, X, XE, diff, prop, type = "ARHMM")
+  Pi = init$Pi
+  pi = init$pi
+  
 	res = arhmmcov(de1=0, ta1=-1, de2=0, ta2=-1, n=n, y=y, X=X, prop1=prop1, pi=pi, Pi=Pi,m10=NULL, m20=NULL, 
 		glmtype=glmtype, maxitIAL=maxitIAL, thresh=thresh, XE = XE, maxitEM=maxitEM, EMconv=EMconv, glmconv=glmconv)
 
@@ -418,6 +408,65 @@ arhmm = function(y, X, prop1,maxitIAL=1000,thresh=0.05, XE=NULL,maxitEM=50, glmt
 	return(final)
 }
 
+setprob = function(y, m1, m2, n, K, glmtype, diff){
+  prob=matrix(0, n, K^2)
+  if(diff == F){
+    if(glmtype!="nb"){
+      prob[,1]=dpois(y, lambda=m1$fitted[seq(1, 2*n, by=2)], log=T)
+      prob[,2]=dpois(y, lambda=m1$fitted[seq(2, 2*n, by=2)], log=T)
+      prob[,3]=dpois(y, lambda=m2$fitted[seq(1, 2*n, by=2)], log=T)
+      prob[,4]=dpois(y, lambda=m2$fitted[seq(2, 2*n, by=2)], log=T)
+    }else{
+      prob[,1]=dnbinom(y, mu=m1$fitted[seq(1, 2*n, by=2)], size=1/m1$phi, log=T)
+      prob[,2]=dnbinom(y, mu=m1$fitted[seq(2, 2*n, by=2)], size=1/m1$phi, log=T)
+      prob[,3]=dnbinom(y, mu=m2$fitted[seq(1, 2*n, by=2)], size=1/m2$phi, log=T)
+      prob[,4]=dnbinom(y, mu=m2$fitted[seq(2, 2*n, by=2)], size=1/m2$phi, log=T)
+    }
+  }else{
+    if(glmtype!="nb"){
+      prob[,1]=dpois(y, lambda=m1$fitted[seq(1, 2*n, by=2)], log=T)
+      prob[,2]=dpois(y, lambda=m1$fitted[seq(2, 2*n, by=2)], log=T)
+      prob[,3]=0
+      prob[,4]=0
+    }else{
+      prob[,1]=dnbinom(y, mu=m1$fitted[seq(1, 2*n, by=2)], size=1/m1$phi, log=T)
+      prob[,2]=dnbinom(y, mu=m1$fitted[seq(2, 2*n, by=2)], size=1/m1$phi, log=T)
+      prob[,3]=0
+      prob[,4]=0
+    }
+  }
+  return(prob)
+}
+
+initparms = function(y, X, XE, diff, prop, type = "ARHMM"){
+  n = length(y)
+  if(type == "HMM" | type == "ARHMM"){ 
+    if(diff == F){ 
+      t = quantile(y,prop1)
+      Pi = matrix(0, 2, 2)
+      Pi[1,1] = sum(y[-1] <= t & y[-n] <= t)/sum(y[-1]<=t)
+      Pi[1,2] = sum(y[-1] <= t & y[-n] >  t)/sum(y[-1]<=t)
+      Pi[2,1] = sum(y[-1] > t & y[-n] <= t)/sum(y[-1]>t)
+      Pi[2,2] = sum(y[-1] > t & y[-n] > t)/sum(y[-1]>t)
+      pi = abs(c(y[1]<=t, y[1]>t) - 10^-100)
+    }else{
+      require(quantreg)
+      #assumes intercept
+      residuals = abs(rq(y ~ exp(XB)-1)$residuals)
+      t = quantile(residuals,prop1)
+      Pi = matrix(0, 2, 2)
+      Pi[1,1] = sum(residuals[-1] <= t & residuals[-n] <= t)/sum(residuals[-1]<=t)
+      Pi[1,2] = sum(residuals[-1] <= t & residuals[-n] >  t)/sum(residuals[-1]<=t)
+      Pi[2,1] = sum(residuals[-1] > t & residuals[-n] <= t)/sum(residuals[-1]>t)
+      Pi[2,2] = sum(residuals[-1] > t & residuals[-n] > t)/sum(residuals[-1]>t)
+      pi = abs(c(residuals[1]<= t, residuals[1]> t) - 10^-100)      
+    }
+    return(list(Pi = Pi, pi = pi))
+  }else if(type == "FMR"){
+    
+  } 
+  
+}
 
 
 arhmmvarsel = function(y, X, prop1,maxitIAL=1000,thresh=0.05, XE=NULL,maxitEM=50, glmtype="pois", EMconv=10^-6, glmconv=10^-5, pen=NULL, de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, m1 = NULL, m2=NULL, Pi=NULL, pi=NULL){
