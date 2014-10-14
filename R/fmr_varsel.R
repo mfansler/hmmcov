@@ -4,16 +4,16 @@ logsumexp=function(v){
 }
 
 
-logsumexp=function(v){
-  if(any(is.infinite(v))){
-    stop("infinite value in v\n")
-  }
-  if(length(v)==1){ return(v[1]) }
-  sv  = sort(v, decreasing=TRUE)
-  res = sum(exp(sv[-1] - sv[1]))
-  lse = sv[1] + log(1+res)
-  lse
-}
+# logsumexp=function(v){
+#   if(any(is.infinite(v))){
+#     stop("infinite value in v\n")
+#   }
+#   if(length(v)==1){ return(v[1]) }
+#   sv  = sort(v, decreasing=TRUE)
+#   res = sum(exp(sv[-1] - sv[1]))
+#   lse = sv[1] + log(1+res)
+#   lse
+# }
 
 fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL, m20=NULL, 
                 glmtype="pois", maxitIAL=100, thresh=0, XE = NULL, maxitEM=50, 
@@ -108,7 +108,7 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
   if(zeroinfl == F){ 
     pp1 = log(pi1) + dnbinom(y, mu = m1$fitted, size = 1/m1$phi, log = T) 
     pp2 = log(pi2) + dnbinom(y, mu = m2$fitted, size = 1/m2$phi, log = T)
-    probi1 = exp(pp1 - apply(cbind(pp1, pp2), 1, logsumexp))
+    probi1 = exp(pp1 - logsumexp(cbind(pp1, pp2)))
     probi2 = 1 - probi1
     probi0 = rep(0, length(probi1))
   }else{
@@ -117,8 +117,8 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
     pp2 = log(1-pp0)+(log(pi2) + dnbinom(y, mu = m2$fitted, size = 1/m2$phi, log = T))
     
     d = rep(0, length(y))
-    d[y==0] = apply(cbind(log(pp0), pp1, pp2)[y==0,], 1, logsumexp)
-    d[y>0] = apply(cbind(pp1, pp2)[y>0,], 1, logsumexp)
+    d[y==0] = logsumexp(cbind(log(pp0), pp1, pp2)[y==0,])
+    d[y>0] = logsumexp(cbind(pp1, pp2)[y>0,])
     
     probi1 = exp(pp1 - d)   
     probi2 = exp(pp2 - d)        
@@ -259,22 +259,25 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
     if(zeroinfl == F){ 
       pp1 = log(pi1) + dnbinom(y, mu = m1$fitted, size = 1/m1$phi, log = T) 
       pp2 = log(pi2) + dnbinom(y, mu = m2$fitted, size = 1/m2$phi, log = T)
-      probi1 = exp(pp1 - apply(cbind(pp1, pp2), 1, logsumexp))
+      probi1 = exp(pp1 - logsumexp(cbind(pp1, pp2)))
       probi2 = 1 - probi1
       probi0 = rep(0, length(probi1))
-      ll[i] = sum(apply(cbind(pp1, pp2), 1, logsumexp)) 
+      ll[i] = sum(logsumexp(cbind(pp1, pp2))) 
     }else{
       pp0 = model0$fitted
       pp1 = log(1-pp0)+(log(pi1) + dnbinom(y, mu = m1$fitted, size = 1/m1$phi, log = T)) 
       pp2 = log(1-pp0)+(log(pi2) + dnbinom(y, mu = m2$fitted, size = 1/m2$phi, log = T))
-      d[y==0] = apply(cbind(log(pp0), pp1, pp2)[y==0,], 1, logsumexp)
-      d[y>0] = apply(cbind(pp1, pp2)[y>0,], 1, logsumexp)
+      
+      d = rep(0, length(y))
+      d[y==0] = logsumexp(cbind(log(pp0), pp1, pp2)[y==0,])
+      d[y>0] = logsumexp(cbind(pp1, pp2)[y>0,])
+      
       
       probi1 = exp(pp1 - d)   
       probi2 = exp(pp2 - d)        
       probi0 = exp(log(pp0) - d)  
       probi0[y>0] = 0 
-      ll[i] = sum(apply(cbind(log(pp0)[y==0], pp1[y==0], pp2[y==0]), 1, logsumexp)) + sum(apply(cbind(pp1[y>0], pp2[y>0]), 1, logsumexp))
+      ll[i] = sum(logsumexp(cbind(log(pp0)[y==0], pp1[y==0], pp2[y==0]))) + sum(logsumexp(cbind(pp1[y>0], pp2[y>0])))
     }
     
     
