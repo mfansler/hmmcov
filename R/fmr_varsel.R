@@ -137,6 +137,7 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
   #begin ECM loop
   ptm <- proc.time()
   for(i in 1:maxitEM){
+    cat(".")
     #if c0>0, then utilizing rejection controlled ECM 
     if(c0[i]>0){
       #save weights
@@ -310,7 +311,7 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
     pi1=mean(probi1)
     pi2=mean(probi2)
   }
-  
+  cat("\n")
   time = (proc.time()-ptm)
   
   m1final=rep(0,p)

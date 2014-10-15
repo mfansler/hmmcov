@@ -750,7 +750,7 @@ void glmNB_IAL(int *dims, double *y, double *offset,double *RX, double *convR,
   Free(lkhood);
   
   Free(X);
-
+  Free(X[0]); //new
   Free(wX[0]);
   Free(wX);
   Free(nX[0]);
