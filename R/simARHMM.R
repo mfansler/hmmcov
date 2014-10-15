@@ -1,4 +1,7 @@
 simARHMM = function(type, n=10000, beta1 = NULL, beta2 = NULL, nu=c(0,0), glmtype = "pois",phi=4){
+  
+  library(HiddenMarkov)
+  
 	K=2
 	if(!is.null(beta1) & !is.null(beta2)){
 			if(length(beta1)!=length(beta2)) stop("for this simulation, number of covariates need to be the same in each state")
