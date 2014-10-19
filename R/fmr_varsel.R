@@ -56,7 +56,7 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
     if(glmtype=="pois"){
       m1=glmIAL(y=y, X=scale(X), prior=probi1, family="poisson", prop=pi1, pMax=dim(X)[2], delta=de1, tau=ta1, nReEstimate=0,maxitIAL=maxitIAL, maxit=25, conv=glmconv)
     }else{
-      m1=glmNB.IAL(y=y, X=scale(X), prior=probi1,   prop=pi1, pMax=dim(X)[2], delta=de1, tau=ta1, nReEstimate=0,maxitIAL=100, maxit=1, conv=glmconv)
+      m1=glmNB.IAL(y=y, X=scale(X), prior=probi1,   prop=pi1, pMax=dim(X)[2], delta=de1, tau=ta1, nReEstimate=0,maxitIAL=100, maxit=25, conv=glmconv)
     }
     vars1 =as.numeric(sqrt(apply(X, 2, var)))
     m1$b2use = m1$b2use/vars1[m1$w2use]
@@ -71,7 +71,7 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
     if(glmtype=="pois"){
       m2=glmIAL(y=y, X=scale(XE), prior=1-probi1, family="poisson", prop=pi2, pMax=dim(XE)[2], delta=de1, tau=ta1, nReEstimate=0,maxitIAL=maxitIAL, maxit=25, conv=glmconv)
     }else{
-      m2=glmNB.IAL(y=y, X=scale(XE), prior=1-probi1,   prop=pi2, pMax=dim(XE)[2], delta=de2, tau=ta2, nReEstimate=0,maxitIAL=100, maxit=1, conv=glmconv)
+      m2=glmNB.IAL(y=y, X=scale(XE), prior=1-probi1,   prop=pi2, pMax=dim(XE)[2], delta=de2, tau=ta2, nReEstimate=0,maxitIAL=100, maxit=25, conv=glmconv)
     }
     vars2 =as.numeric(sqrt(apply(XE, 2, var)))
     m2$b2use = m2$b2use/vars2[m2$w2use]
@@ -83,7 +83,7 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
   if(zeroinfl == T){
       if(is.null(XZ)) XZ = matrix(1, ncol= 1, nrow = nrow(X))
       probi0 =(y  == 0)^2 
-      model0 = suppressWarnings(glm(probi0 ~ XZ-1, family = binomial()))
+      model0 = suppressWarnings(glm(probi0 ~ XZ, family = binomial()))
   }
   if(trace ==1)  cat("fmrcov init finished \n")
   #prob=matrix(0, n, K)
@@ -141,20 +141,24 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
     #if c0>0, then utilizing rejection controlled ECM 
     if(c0[i]>0){
       #save weights
-      c1 = probi1/(probi1 + probi2)
-      c2 = 1 - c1
+      c1 = probi1
+      c2 = probi2
+      c3 = probi0
       
       #threshold given rejection procedure
       c1[c1<c0[i]] = rbinom(sum(c1<c0[i]), 1, c1[c1<c0[i]]/c0[i])*c0[i]  
       c2[c2<c0[i]] = rbinom(sum(c2<c0[i]), 1, c2[c2<c0[i]]/c0[i])*c0[i] 
+      c3[c3<c0[i]] = rbinom(sum(c3<c0[i]), 1, c3[c3<c0[i]]/c0[i])*c0[i]
       
       #normalized thresholded weights, save to f1, f2 
-      f1 = c1/(c1+c2)
-      f2 = c2/(c1+c2)
+      f1 = c1/(c1+c2+c3)
+      f2 = c2/(c1+c2+c3)
+      f3 = c3/(c1+c2+c3)
       
       #if both c1 and c2 are zero, set both to 0
       f1[is.na(f1)] = 0
       f2[is.na(f2)] = 0
+      f3[is.na(f3)] = 0
       
       #remove observation whose new weights are 0
       XS1 = matrix(X[f1>0,],sum(f1>0), dim(X)[2]) 		
@@ -163,6 +167,10 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
       XS2 = matrix(XE[f2>0,],sum(f2>0), dim(XE)[2])
       y2 = y[f2>0]
       which2 = which(f2>0)
+      XS3 = matrix(XZ[f3>0,],sum(f3>0), dim(XZ)[2])
+      y3 = y[f3>0]
+      which3 = which(f3>0)
+      
       
       #if non meet threshold, set back to original data
       if(sum(probi1<c0[i])==0){
@@ -171,19 +179,29 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
         which1 = 1:length(y)
       }	
       
-      if(sum(1 - probi1 < c0[i])==0){
+      if(sum(probi2 < c0[i])==0){
         y2 = y
         XS2 = XE
         which2 = 1:length(y)
+      }
+      
+      if(sum(probi0 < c0[i])==0){
+        y2 = y
+        XS3 = XZ
+        which3 = 1:length(y)
       }
     }else{
       f1 = probi1
       y1 =y
       XS1 = X
-      f2 = 1 - probi1
+      f2 = probi2
       y2 = y
       XS2 = XE
-      which1=which2 = 1:length(y)
+      f3 = probi0
+      y3 = y
+      XS3 = XZ
+      
+      which1=which2=which3= 1:length(y)
     }
     
     #CM1 for beta using scaled covariate matrix
@@ -224,7 +242,7 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
       if(glmtype=="pois"){
         m2=glmIAL(y=y2, X=scale(XS2), prior=f2[which2],   prop=mean(f2), pMax=dim(XS2)[2], delta=de2, tau=ta2, nReEstimate=0,maxitIAL=maxitIAL, maxit=25, conv=glmconv, fitted=m2$fitted[which2],family="poisson")
       }else{
-        m2=glmNB.IAL(y=y2, X=scale(XS2), prior=f2[which2],   prop=mean(f2), pMax=dim(XS2)[2], delta=de2, tau=ta2, nReEstimate=0,maxitIAL=maxitIAL, maxit=25, conv=glmconv, fitted=m2$fitted[which2], phi=phi2)
+        m2=glmNB.IAL(y=y2, X=scale(XS2), prior=f2[which2],   prop=mean(f2), pMax=dim(XS2)[2], delta=de2, tau=ta2, nReEstimate=0,maxitIAL=maxitIAL, maxit=1, conv=glmconv, fitted=m2$fitted[which2], phi=phi2)
       }
       unstcoef2=m2$b2use
       vars2 =as.numeric(sqrt(apply(XS2, 2, var)))
@@ -253,7 +271,7 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
     }
     
     if(zeroinfl == T){
-      model0 = suppressWarnings(glm(probi0 ~ XZ-1, family = binomial()))
+      model0 = suppressWarnings(glm(probi0 ~ XZ, family = binomial()))
     }
     
     #E step
@@ -266,6 +284,7 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
       probi2 = 1 - probi1
       probi0 = rep(0, length(probi1))
       ll[i] = sum(logsumexpc(cbind(pp1, pp2))) 
+      model0 = NULL
     }else{
       pp0 = model0$fitted
       pp1 = log(1-pp0)+(log(pi1) + dnbinom(y, mu = m1$fitted, size = 1/m1$phi, log = T)) 
@@ -283,7 +302,7 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
       ll[i] = sum(logsumexpc(cbind(log(pp0)[y==0], pp1[y==0], pp2[y==0]))) + sum(logsumexpc(cbind(pp1[y>0], pp2[y>0])))
     }
     
-    if(trace ==1)  cat("fmrcov EM step" ,i, "ll", ll[i] ,"\n")
+    if(trace ==1)  cat("fmrcov EM step" ,i, "ll", ll[i],mean(probi0), mean(probi1), mean(probi2), "\n")
     
     #resu=.C("forwardback", as.double(log(Pi)), as.double(log(pi)), as.double(prob), as.integer(nrow(prob)), as.integer(K), logalpha = double(nrow(prob)*K),logbeta = double(nrow(prob)*K),LL = double(1), package="hmmcov")
     #forward = matrix(resu$logalpha, ncol=2) 
