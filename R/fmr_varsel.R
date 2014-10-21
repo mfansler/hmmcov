@@ -54,6 +54,11 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
   #estimate inital beta for states that are not held fixed (only during tuning parameter selection)
   #if(!is.null(de1) & !is.null(ta1)){	
   #only fit on first full model fit, use m10 and m20 as starting always
+  
+  ###
+  de1 = de2 = ta1 = ta2 = NULL
+  ###
+  
   if(!any(is.null(c(de1, de2, ta1, ta2))) & is.null(m10)){	
     if(glmtype=="pois"){
       m1=glmIAL(y=y, X=scale(X), prior=probi1, family="poisson", prop=pi1, pMax=dim(X)[2], delta=de1, tau=ta1, nReEstimate=100,maxitIAL=maxitIAL, maxit=25, conv=glmconv)
@@ -85,7 +90,33 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
   if(zeroinfl == T){
       if(is.null(XZ)) XZ = matrix(1, ncol= 1, nrow = nrow(X))
       probi0 =(y  == 0)^2 
-      model0 = suppressWarnings(glm(probi0 ~ XZ, family = binomial()))
+      #model0 = suppressWarnings(glm(probi0 ~ XZ, family = binomial()))
+      
+      ###
+      model0 <-.C("pglm_fit", family=as.integer(1), N=as.integer(length(y)), 
+                      M=as.integer(ncol(as.data.frame(XZ[,-c(1)]))), as.double(y <= 0), as.double(rep(1,n)), as.double(rep(0,n)), 
+                      as.double(unlist(as.data.frame(XZ[,-c(1)]))),  as.integer(rep(1,n)),init=as.integer(1), 
+                      rank=integer(1), double(n*ncol(as.data.frame(XZ[,-c(1)]))), 
+                      fitted=as.double((rep(1,n) * (y <= 0) + 0.5)/(rep(1,n) + 1)), double(n), 
+                      double(n),scale=double(1), df_resid=integer(1), theta=as.double(-1), package='zinba')
+      
+      m1 <- .C("pglm_fit", family=as.integer(2), N=as.integer(length(y)), 
+                         M=as.integer(ncol(as.data.frame(X[,-c(1)]))), as.double(y), as.double(1-probi1), 
+                         as.double(rep(0,length(y))), as.double(unlist(as.data.frame(X[,-c(1)]))),  
+                         as.integer(rep(1,length(y))),init=as.integer(1), rank=integer(1), 
+                         double(length(y)*ncol(as.data.frame(X[,-c(1)]))), fitted=as.double(y+(y==0)/6), 
+                         double(length(y)), double(length(y)),scale=double(1), df_resid=integer(1), 
+                         theta=as.double(-1), package='zinba')
+      m2 <- .C("pglm_fit", family=as.integer(2), N=as.integer(length(y)), 
+                         M=as.integer(ncol(as.data.frame(XE[,-c(1)]))), as.double(y), as.double(probi1), 
+                         as.double(rep(0,length(y))), as.double(unlist(as.data.frame(XE[,-c(1)]))),  
+                         as.integer(rep(1,length(y))),init=as.integer(1), 
+                         rank=integer(1),double(length(y)*ncol(as.data.frame(XE[,-c(1)]))), fitted=as.double(y+(y==0)/6), 
+                         double(length(y)), double(length(y)),scale=double(1), df_resid=integer(1), 
+                         theta=as.double(-1), package='zinba')
+      m1$phi = 1/m1$theta
+      m2$phi = 1/m2$theta
+      ###
   }
   if(trace ==1)  cat("fmrcov init finished \n")
   #prob=matrix(0, n, K)
@@ -274,7 +305,31 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
         
     if(zeroinfl == T){
       # this needs to be updated to include the thresholded values
-      model0 = suppressWarnings(glm(probi0 ~ XZ, family = binomial()))
+      #model0 = suppressWarnings(glm(probi0 ~ XZ, family = binomial()))
+      
+      ###
+      model0 <- .C("pglm_fit", family=as.integer(1), N=as.integer(length(y)), 
+                   M=as.integer(ncol(as.data.frame(XZ[,-c(1)]))),as.double(probi0), as.double(rep(1,n)), 
+                   as.double(rep(0,n)), as.double(unlist(as.data.frame(XZ[,-c(1)]))),  
+                   as.integer(rep(1,n)),init=as.integer(1), rank=integer(1), 
+                   double(n*ncol(as.data.frame(XZ[,-c(1)]))), fitted=as.double((rep(1,n)*probi0 + 0.5)/(rep(1,n) + 1)), 
+                   double(n), double(n),scale=double(1), df_resid=integer(1), theta=as.double(-1),
+                   package='zinba')  
+      m1 <- .C("pglm_fit", family=as.integer(0), N=as.integer(length(y1)), 
+               M=as.integer(ncol(as.data.frame(XS1[,-c(1)]))), as.double(y1), as.double(f1[which1]), 
+               as.double(rep(0,length(y1))), as.double(unlist(as.data.frame(XS1[,-c(1)]))), 
+               as.integer(rep(1,length(y1))),init=as.integer(1), rank=integer(1), 
+               double(length(y1)*ncol(as.data.frame(XS1[,-c(1)]))), fitted=as.double(m1$fitted[which1]), double(length(y1)), 
+               double(length(y1)),scale=double(1), df_resid=integer(1), theta=as.double(m1$theta), 
+               package='zinba')  
+      m2 <- .C("pglm_fit", family=as.integer(0), N=as.integer(length(y2)), 
+               M=as.integer(ncol(as.data.frame(XS2[,-c(1)]))), as.double(y2), as.double(f2[which2]), 
+               as.double(rep(0,length(y2))), as.double(unlist(as.data.frame(XS2[,-c(1)]))), 
+               as.integer(rep(1,length(y2))),init=as.integer(1), rank=integer(1), 
+               double(length(y2)*ncol(as.data.frame(XS2[,-c(1)]))), fitted=as.double(m2$fitted[which2]), double(length(y2)), 
+               double(length(y2)),scale=double(1), df_resid=integer(1), theta=as.double(m2$theta), 
+               package='zinba')  
+      ###
     }
     
     #E step
