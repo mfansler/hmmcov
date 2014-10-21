@@ -331,8 +331,8 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
                double(length(y2)*ncol(as.data.frame(XS2[,-c(1)]))), fitted=as.double(m2$fitted[which2]), double(length(y2)), 
                double(length(y2)),scale=double(1), df_resid=integer(1), theta=as.double(m2$theta), 
                package='zinba')  
-      m1$phi = 1/m1$phi
-      m2$phi = 1/m2$phi
+      m1$phi = 1/m1$theta
+      m2$phi = 1/m2$theta
       ###
     }
     
