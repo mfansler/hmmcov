@@ -320,8 +320,8 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
     #chsi2=exp(chsi2)
     
     #end of E-step, check stopping criterion
-    if(i>1) if(abs((ll[i] - ll[i-1])/ll[i-1])<EMconv*1000) c0[i+1] = c0[i]*.9
-    if(i>1) if(abs((ll[i] - ll[i-1])/ll[i-1])<EMconv*100) c0[i+1] = c0[i]*.5
+    if(i>1) if(abs((ll[i] - ll[i-1])/ll[i-1])<EMconv*100) c0[i+1] = c0[i]*.9
+    if(i>1) if(abs((ll[i] - ll[i-1])/ll[i-1])<EMconv*10) c0[i+1] = c0[i]*.5
     if(i>1) if(abs((ll[i] - ll[i-1])/ll[i-1])<EMconv) break
     #end of E-step		 
     
