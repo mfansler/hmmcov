@@ -73,7 +73,7 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
     if(glmtype=="pois"){
       m2=glmIAL(y=y, X=scale(XE), prior=1-probi1, family="poisson", prop=pi2, pMax=dim(XE)[2], delta=de1, tau=ta1, nReEstimate=100,maxitIAL=maxitIAL, maxit=25, conv=glmconv)
     }else{
-      m2=glmNB.IAL(y=y, X=scale(XE), prior=1-probi1,   prop=pi2, pMax=dim(XE)[2], delta=de2, tau=ta2, nReEstimate=0,maxitIAL=maxitIAL, maxit=1, conv=glmconv)
+      m2=glmNB.IAL(y=y, X=scale(XE), prior=1-probi1,   prop=pi2, pMax=dim(XE)[2], delta=de2, tau=ta2, nReEstimate=100,maxitIAL=maxitIAL, maxit=1, conv=glmconv)
     }
     vars2 =as.numeric(sqrt(apply(XE, 2, var)))
     m2$b2use = m2$b2use/vars2[m2$w2use]
