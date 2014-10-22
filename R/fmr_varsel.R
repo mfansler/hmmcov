@@ -37,11 +37,7 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
   }else{
     #this procedure needs to be updated to be more similar to zinba, setting an upper limit for pi2 when window size
     # is small
-    #probi1=(y<=quantile(y, prop1))^2
-    library(quantreg)
-    fit0 = rq(y~X, tau=prop1, method='pfn')
-    res = fit0$residuals
-    probi1=(res<=quantile(res, prop1))^2
+    probi1=(y<=quantile(y, prop1))^2
     pi1=mean(probi1)
     pi2 = 1-pi1
   }
@@ -60,9 +56,9 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
   #only fit on first full model fit, use m10 and m20 as starting always
   if(!any(is.null(c(de1, de2, ta1, ta2))) & is.null(m10)){	
     if(glmtype=="pois"){
-      m1=glmIAL(y=y, X=scale(X), prior=probi1, family="poisson", prop=pi1, pMax=dim(X)[2], delta=de1, tau=ta1, nReEstimate=0,maxitIAL=maxitIAL, maxit=25, conv=glmconv)
+      m1=glmIAL(y=y, X=scale(X), prior=probi1, family="poisson", prop=pi1, pMax=dim(X)[2], delta=de1, tau=ta1, nReEstimate=100,maxitIAL=maxitIAL, maxit=25, conv=glmconv)
     }else{
-      m1=glmNB.IAL(y=y, X=scale(X), prior=probi1,   prop=pi1, pMax=dim(X)[2], delta=de1, tau=ta1, nReEstimate=0,maxitIAL=maxitIAL, maxit=1, conv=glmconv)
+      m1=glmNB.IAL(y=y, X=scale(X), prior=probi1,   prop=pi1, pMax=dim(X)[2], delta=de1, tau=ta1, nReEstimate=100,maxitIAL=maxitIAL, maxit=1, conv=glmconv)
     }
     vars1 =as.numeric(sqrt(apply(X, 2, var)))
     m1$b2use = m1$b2use/vars1[m1$w2use]
@@ -75,7 +71,7 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
   #only fit on full model fit, use m10 and m20 as starting always.  Assume Pi and pi are passed from first fit
   if(!any(is.null(c(de1, de2, ta1, ta2))) & is.null(m20)){	
     if(glmtype=="pois"){
-      m2=glmIAL(y=y, X=scale(XE), prior=1-probi1, family="poisson", prop=pi2, pMax=dim(XE)[2], delta=de1, tau=ta1, nReEstimate=0,maxitIAL=maxitIAL, maxit=25, conv=glmconv)
+      m2=glmIAL(y=y, X=scale(XE), prior=1-probi1, family="poisson", prop=pi2, pMax=dim(XE)[2], delta=de1, tau=ta1, nReEstimate=100,maxitIAL=maxitIAL, maxit=25, conv=glmconv)
     }else{
       m2=glmNB.IAL(y=y, X=scale(XE), prior=1-probi1,   prop=pi2, pMax=dim(XE)[2], delta=de2, tau=ta2, nReEstimate=0,maxitIAL=maxitIAL, maxit=1, conv=glmconv)
     }
@@ -213,9 +209,9 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
     #CM1 for beta using scaled covariate matrix
     if(!is.null(de1) & !is.null(ta1)){	
       if(glmtype=="pois"){
-        m1=glmIAL(y=y1, X=scale(XS1), prior=f1[which1],   prop=mean(f1), pMax=dim(XS1)[2], delta=de1, tau=ta1, nReEstimate=0,maxitIAL=maxitIAL, maxit=25, conv=glmconv, fitted=m1$fitted[which1],family="poisson")
+        m1=glmIAL(y=y1, X=scale(XS1), prior=f1[which1],   prop=mean(f1), pMax=dim(XS1)[2], delta=de1, tau=ta1, nReEstimate=100,maxitIAL=maxitIAL, maxit=25, conv=glmconv, fitted=m1$fitted[which1],family="poisson")
       }else{
-        m1=glmNB.IAL(y=y1, X=scale(XS1), prior=f1[which1],   prop=mean(f1), pMax=dim(XS1)[2], delta=de1, tau=ta1,  nReEstimate=0, maxitIAL=maxitIAL, maxit=1, conv=glmconv, fitted=m1$fitted[which1], phi=phi1)
+        m1=glmNB.IAL(y=y1, X=scale(XS1), prior=f1[which1],   prop=mean(f1), pMax=dim(XS1)[2], delta=de1, tau=ta1,  nReEstimate=100, maxitIAL=maxitIAL, maxit=1, conv=glmconv, fitted=m1$fitted[which1], phi=phi1)
       }
       unstcoef1=m1$b2use	
       vars1 =as.numeric(sqrt(apply(XS1, 2, var)))
@@ -246,9 +242,9 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
     
     if(!is.null(de2) & !is.null(ta2)){
       if(glmtype=="pois"){
-        m2=glmIAL(y=y2, X=scale(XS2), prior=f2[which2],   prop=mean(f2), pMax=dim(XS2)[2], delta=de2, tau=ta2, nReEstimate=0,maxitIAL=maxitIAL, maxit=25, conv=glmconv, fitted=m2$fitted[which2],family="poisson")
+        m2=glmIAL(y=y2, X=scale(XS2), prior=f2[which2],   prop=mean(f2), pMax=dim(XS2)[2], delta=de2, tau=ta2, nReEstimate=100,maxitIAL=maxitIAL, maxit=25, conv=glmconv, fitted=m2$fitted[which2],family="poisson")
       }else{
-        m2=glmNB.IAL(y=y2, X=scale(XS2), prior=f2[which2],   prop=mean(f2), pMax=dim(XS2)[2], delta=de2, tau=ta2, nReEstimate=0,maxitIAL=maxitIAL, maxit=1, conv=glmconv, fitted=m2$fitted[which2], phi=phi2)
+        m2=glmNB.IAL(y=y2, X=scale(XS2), prior=f2[which2],   prop=mean(f2), pMax=dim(XS2)[2], delta=de2, tau=ta2, nReEstimate=100,maxitIAL=maxitIAL, maxit=1, conv=glmconv, fitted=m2$fitted[which2], phi=phi2)
       }
       unstcoef2=m2$b2use
       vars2 =as.numeric(sqrt(apply(XS2, 2, var)))
@@ -278,7 +274,7 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
         
     if(zeroinfl == T){
       # this needs to be updated to include the thresholded values
-      model0 = suppressWarnings(glm(f3 ~ XS3, family = binomial()))
+      model0 = suppressWarnings(glm(probi0 ~ XZ, family = binomial()))
     }
     
     #E step
@@ -324,9 +320,8 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
     #chsi2=exp(chsi2)
     
     #end of E-step, check stopping criterion
-    if(i>1) if(abs((ll[i] - ll[i-1])/ll[i-1])<EMconv*50) c0[i+1] = c0[i]*.9
-    if(i>1) if(abs((ll[i] - ll[i-1])/ll[i-1])<EMconv*10) c0[i+1] = c0[i]*.75
-    if(i>1) if(abs((ll[i] - ll[i-1])/ll[i-1])<EMconv*5) c0[i+1] = c0[i]*.5
+    if(i>1) if(abs((ll[i] - ll[i-1])/ll[i-1])<EMconv*100) c0[i+1] = c0[i]*.9
+    if(i>1) if(abs((ll[i] - ll[i-1])/ll[i-1])<EMconv*10) c0[i+1] = c0[i]*.5
     if(i>1) if(abs((ll[i] - ll[i-1])/ll[i-1])<EMconv) break
     #end of E-step		 
     
