@@ -38,7 +38,7 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
     #this procedure needs to be updated to be more similar to zinba, setting an upper limit for pi2 when window size
     # is small
     #probi1=(y<=quantile(y, prop1))^2
-    fit0 = glmIAL(y=y, X=scale(X), prior=rep(0, length(y)), family="poisson", prop=pi1, pMax=dim(X)[2], delta=de1, tau=ta1, nReEstimate=0,maxitIAL=maxitIAL, maxit=25, conv=glmconv)
+    fit0 = glmIAL(y=y, X=scale(X), prior=rep(0, length(y)), family="poisson", prop=1, pMax=dim(X)[2], delta=de1, tau=ta1, nReEstimate=0,maxitIAL=maxitIAL, maxit=25, conv=glmconv)
     res = (y-fit0$fitted)/(fit$fitted + 1)
     probi1=(res<=quantile(res, prop1))^2
     pi1=mean(probi1)
