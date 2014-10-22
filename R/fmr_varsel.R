@@ -39,7 +39,7 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
     # is small
     #probi1=(y<=quantile(y, prop1))^2
     library(quantreg)
-    fit0 = rq(y~X, tau=prop1, data=data2, method='pfn')
+    fit0 = rq(y~X, tau=prop1, method='pfn')
     res = fit0$residuals
     probi1=(res<=quantile(res, prop1))^2
     pi1=mean(probi1)
@@ -278,7 +278,7 @@ fmrcov=function(de1=NULL, ta1=NULL, de2=NULL, ta2=NULL, n, y, X,prop1, m10=NULL,
         
     if(zeroinfl == T){
       # this needs to be updated to include the thresholded values
-      model0 = suppressWarnings(glm(f3 ~ XZ[which3,], family = binomial()))
+      model0 = suppressWarnings(glm(f3 ~ XS3, family = binomial()))
     }
     
     #E step
