@@ -145,6 +145,7 @@ EMconv=10^-6, glmconv=10^-5, diff = F){
 	#begin ECM loop
 	ptm <- proc.time()
 	for(i in 1:maxitEM){
+	  cat(".")
 		#if(i==5) break
 		#if c0>0, then utilizing rejection controlled ECM 
 		if(c0[i]>0){
@@ -341,6 +342,7 @@ EMconv=10^-6, glmconv=10^-5, diff = F){
 		pi=forwardbackward[1,] 
 		a=c(Pi[1,], Pi[2,])
 	}
+	cat("\n")
 	time=(ptm <- proc.time())
 
 	m1final=rep(0,p)
