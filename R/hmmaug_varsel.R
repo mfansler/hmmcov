@@ -387,11 +387,20 @@ arhmm = function(y, X, prop1,maxitIAL=1000,thresh=0.05, XE=NULL,maxitEM=50, glmt
 	
 	if(length(y)!=nrow(X)) stop("length of y does not match rows of X, or X is not a matrix")
 
+	#n = length(y)
+  #init = initparms(y, X, XE, diff, prop, type = "ARHMM")
+  #Pi = init$Pi
+  #pi = init$pi
 	n = length(y)
-  init = initparms(y, X, XE, diff, prop, type = "ARHMM")
-  Pi = init$Pi
-  pi = init$pi
-  
+	t = quantile(y,prop1)
+	Pi = matrix(0, 2, 2)
+	Pi[1,1] = sum(y[-1] <= t & y[-n] <= t)/sum(y[-1]<=t)
+	Pi[1,2] = sum(y[-1] <= t & y[-n] >  t)/sum(y[-1]<=t)
+	Pi[2,1] = sum(y[-1] > t & y[-n] <= t)/sum(y[-1]>t)
+	Pi[2,2] = sum(y[-1] > t & y[-n] > t)/sum(y[-1]>t)
+	
+	pi = abs(c(y[1]<=t, y[1]>t) - 10^-100)
+	
 	res = arhmmcov(de1=0, ta1=-1, de2=0, ta2=-1, n=n, y=y, X=X, prop1=prop1, pi=pi, Pi=Pi,m10=NULL, m20=NULL, 
 		glmtype=glmtype, maxitIAL=maxitIAL, thresh=thresh, XE = XE, maxitEM=maxitEM, EMconv=EMconv, glmconv=glmconv)
 
