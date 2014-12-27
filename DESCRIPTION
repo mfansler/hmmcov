@@ -1,7 +1,7 @@
 Package: hmmcov
 Type: Package
 Title: HMM and AR-HMM modeling of DAE-seq data, with variable selection
-Version: 1.0
+Version: 1.01
 Date: 2013-05-19
 Author: Naim Rashid
 Maintainer: Naim Rashid <naim@unc.edu>
